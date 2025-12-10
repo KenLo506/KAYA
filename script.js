@@ -15,52 +15,73 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Start the carousel interval
-    setInterval(nextSlide, slideInterval);
+    if (slides.length > 0) {
+        setInterval(nextSlide, slideInterval);
+    }
 
-// --- PARALLAX CODE START ---
-const aboutSection = document.querySelector('.about-section');
-const textBox = document.querySelector('.parallax-element');
-const image = document.querySelector('.parallax-image');
-
-// We check if we are on a large screen (> 768px)
-// Parallax often breaks layout on mobile, so we usually disable it there
-const isDesktop = window.matchMedia("(min-width: 768px)");
-
-if (aboutSection && textBox && image) {
+    // --- PARALLAX EFFECT FOR ABOUT SECTION ---
+    const pandanImage = document.querySelector('.pandan-image');
+    const aboutContentBox = document.querySelector('.about-content-box');
+    const aboutSection = document.querySelector('.about-section');
     
     function updateParallax() {
-        // Only run on desktop
-        if (!isDesktop.matches) {
-            textBox.style.transform = 'translateY(0)';
-            image.style.transform = 'translateY(0)';
-            return;
-        }
-
-        // 1. Get the distance of the section from the top of the viewport
-        const sectionTop = aboutSection.getBoundingClientRect().top;
+        if (!aboutSection) return;
+        
+        const scrolled = window.pageYOffset;
+        const sectionTop = aboutSection.offsetTop;
+        const sectionHeight = aboutSection.offsetHeight;
         const windowHeight = window.innerHeight;
-
-        // 2. Check if section is roughly in view (optimization)
-        if (sectionTop < windowHeight && sectionTop > -aboutSection.offsetHeight) {
+        
+        // Check if section is in view
+        if (scrolled + windowHeight > sectionTop && scrolled < sectionTop + sectionHeight) {
+            // Parallax for pandan image (moves slower, creating depth)
+            if (pandanImage) {
+                const imageSpeed = 0.15;
+                const imageYPos = (scrolled - sectionTop + windowHeight) * imageSpeed;
+                pandanImage.style.transform = `translateY(${imageYPos}px)`;
+            }
             
-            // 3. The Math:
-            // We multiply the position by a small decimal (speed).
-            // A NEGATIVE number moves it UP (against scroll) -> feels "lighter" / "background"
-            // A POSITIVE number moves it DOWN (with scroll) -> feels "heavier" / "foreground"
-            
-            // Text moves slightly fast
-            const textSpeed = 0.1; 
-            // Image moves slightly slower (creating depth)
-            const imageSpeed = 0.03; 
+            // Parallax for about content box (moves faster)
+            if (aboutContentBox) {
+                const contentSpeed = 0.1;
+                const contentYPos = -(scrolled - sectionTop + windowHeight) * contentSpeed;
+                aboutContentBox.style.transform = `translateY(${contentYPos}px)`;
+            }
+        }
+    }
 
-            // We calculate movement. 
-            // Note: We subtract a small offset (windowHeight * 0.1) to center the effect 
-            // so they are aligned when they are near the center of the screen.
-            const textMove = (sectionTop) * textSpeed;
-            const imageMove = (sectionTop) * imageSpeed;
+    // --- SCROLL PROGRESS BAR ---
+    const scrollProgress = document.querySelector('.scroll-progress');
+    
+    function updateScrollProgress() {
+        if (!scrollProgress) return;
+        
+        const windowHeight = window.innerHeight;
+        const documentHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        const scrollableHeight = documentHeight - windowHeight;
+        
+        if (scrollableHeight > 0) {
+            const progress = (scrollTop / scrollableHeight) * 100;
+            scrollProgress.style.width = `${Math.min(progress, 100)}%`;
+        }
+    }
 
-            textBox.style.transform = `translateY(${textMove}px)`;
-            image.style.transform = `translateY(${imageMove}px)`;
+    // --- NAV BUTTON FADE ON SCROLL ---
+    const heroSection = document.querySelector('.hero');
+    const navButtons = document.querySelectorAll('.nav-btn:not(.primary-btn)');
+    
+    function updateNavButtons() {
+        if (!heroSection) return;
+        
+        const heroBottom = heroSection.offsetTop + heroSection.offsetHeight;
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        
+        // Add 'scrolled' class when past hero section
+        if (scrollTop > heroBottom - 100) {
+            navButtons.forEach(btn => btn.classList.add('scrolled'));
+        } else {
+            navButtons.forEach(btn => btn.classList.remove('scrolled'));
         }
     }
 
@@ -70,16 +91,23 @@ if (aboutSection && textBox && image) {
         if (!ticking) {
             window.requestAnimationFrame(() => {
                 updateParallax();
+                updateScrollProgress();
+                updateNavButtons();
                 ticking = false;
             });
             ticking = true;
         }
     });
 
-    // Run once on load to set initial positions
+    // Initialize on load
     updateParallax();
+    updateScrollProgress();
+    updateNavButtons();
     
-    // Update on resize in case screen size changes
-    window.addEventListener('resize', updateParallax);
-}
+    // Update on resize
+    window.addEventListener('resize', () => {
+        updateParallax();
+        updateScrollProgress();
+        updateNavButtons();
+    });
 });
